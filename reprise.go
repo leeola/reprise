@@ -8,7 +8,30 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
+
+var (
+	// urlCharsReg is used to remove non-filesystem friendly characters from
+	// a url path.
+	//
+	// Ie, / signals a directory on unix, so naming a file with a / char
+	// causes annoyances.
+	//
+	// Example:
+	//    /foo/bar  -> _foo_bar
+	//    /         -> _
+	urlCharsReg *regexp.Regexp
+)
+
+func init() {
+	r, err := regexp.Compile("[^a-zA-Z0-9]+")
+	if err != nil {
+		panic(fmt.Sprintf("urlCharsReg compile: %v", err))
+	}
+	urlCharsReg = r
+}
 
 type Step struct {
 	Step   int
@@ -41,7 +64,7 @@ func New(path string) (*Reprise, error) {
 func (rep *Reprise) Request() (Request, error) {
 	step := rep.step()
 
-	stepPath := filepath.Join(rep.path, step.FormatRequest())
+	stepPath := filepath.Join(rep.path, step.RequestFilename())
 	b, err := ioutil.ReadFile(stepPath)
 	if err != nil {
 		return Request{}, fmt.Errorf("readfile: %v", err)
@@ -133,7 +156,7 @@ func (rep *Reprise) WriteRequest(httpReq *http.Request) (Request, error) {
 		return Request{}, fmt.Errorf("marshalindent: %v", err)
 	}
 
-	path := filepath.Join(rep.path, name.Filename())
+	path := filepath.Join(rep.path, name.RequestFilename())
 
 	if err := ioutil.WriteFile(path, b, 0644); err != nil {
 		return Request{}, fmt.Errorf("writefile: %v", err)
@@ -147,13 +170,26 @@ func (rep *Reprise) WriteResponse() (Response, error) {
 }
 
 func (s Step) String() string {
-	return s.Filename()
+	return s.filename()
 }
 
-func (s Step) Filename() string {
-	return fmt.Sprintf("%02d.%s.%s", s.Step, s.Method, s.URL)
+func (s Step) filename() string {
+	// NOTE(leeola): using ToLower on the url means that Reprise will
+	// consider the same url characters but different case as the same URL.
+	// This normalization is to support the fact that OSX and windows do not
+	// respect case.
+	//
+	// Since these reprise files on disk are likely to be committed to git
+	// and run by multiple OSs, we have to appease the lowest common
+	// denominator. Which means, no case support for URLs, unfortunately.
+	url := strings.ToLower(urlCharsReg.ReplaceAllString(s.URL, "_"))
+	return fmt.Sprintf("%02d.%s.%s", s.Step, strings.ToLower(s.Method), url)
 }
 
-func (s Step) FormatRequest() string {
-	return fmt.Sprintf("%s.request.json", s.Filename())
+func (s Step) RequestFilename() string {
+	return fmt.Sprintf("%s.request.json", s.filename())
+}
+
+func (s Step) ResponseFilename() string {
+	return fmt.Sprintf("%s.response.json", s.filename())
 }
