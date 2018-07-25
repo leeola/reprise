@@ -27,8 +27,9 @@ func TestMiddleware(t *testing.T) {
 
 	m := reprise.Middleware(rep)
 
+	responseStr := `{"msg": "Hello world"}`
 	h := m(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Hello, client")
+		fmt.Fprint(w, responseStr)
 	}))
 
 	ts := httptest.NewServer(h)
@@ -43,8 +44,8 @@ func TestMiddleware(t *testing.T) {
 		t.Errorf("unexpected status: %d, %q", resp.StatusCode, resp.Status)
 	}
 
-	if got := string(mustDumpResp(resp)); got != "Hello, client" {
-		t.Errorf("unexpected response. want:%q, got:%q", "Hello, client", got)
+	if got := string(mustDumpResp(resp)); got != responseStr {
+		t.Errorf("unexpected response. want:%q, got:%q", responseStr, got)
 	}
 
 	step, _, _, err := rep.Step()
@@ -65,8 +66,8 @@ func TestMiddleware(t *testing.T) {
 		t.Errorf("unexpected status: %d, %q", resp.StatusCode, resp.Status)
 	}
 
-	if got := string(mustDumpResp(resp)); got != "Hello, client" {
-		t.Errorf("unexpected response. want:%q, got:%q", "Hello, client", got)
+	if got := string(mustDumpResp(resp)); got != responseStr {
+		t.Errorf("unexpected response. want:%q, got:%q", responseStr, got)
 	}
 
 	step, _, _, err = rep.Step()

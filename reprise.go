@@ -1,12 +1,10 @@
 package reprise
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -58,29 +56,6 @@ func New(path string) (*Reprise, error) {
 	rep.SetStep(0)
 
 	return rep, nil
-}
-
-func NewRequest(httpReq *http.Request) (Request, error) {
-	r := Request{
-		Method:  httpReq.Method,
-		URLPath: httpReq.URL.Path,
-	}
-
-	if httpReq.Body != nil {
-		b, err := ioutil.ReadAll(httpReq.Body)
-		if err != nil {
-			return Request{}, fmt.Errorf("readall: %v", err)
-		}
-
-		var buf bytes.Buffer
-		if err := json.Indent(&buf, b, "", "  "); err != nil {
-			r.Body = b
-		} else {
-			r.JSON = buf.Bytes()
-		}
-	}
-
-	return r, nil
 }
 
 func (rep *Reprise) Step() (int, *Response, *Request, error) {
@@ -168,13 +143,22 @@ func (rep *Reprise) Write(res Response, req Request) error {
 
 	b, err := json.MarshalIndent(req, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshalindent: %v", err)
+		return fmt.Errorf("request marshalindent: %v", err)
 	}
 
 	path := filepath.Join(rep.path, step.RequestFilename())
-
 	if err := ioutil.WriteFile(path, b, 0644); err != nil {
-		return fmt.Errorf("writefile: %v", err)
+		return fmt.Errorf("request writefile: %v", err)
+	}
+
+	b, err = json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		return fmt.Errorf("response marshalindent: %v", err)
+	}
+
+	path = filepath.Join(rep.path, step.ResponseFilename())
+	if err := ioutil.WriteFile(path, b, 0644); err != nil {
+		return fmt.Errorf("response writefile: %v", err)
 	}
 
 	// increment the step index

@@ -9,8 +9,8 @@ import (
 )
 
 type Response struct {
-	JSON json.RawMessage `json:"json"`
-	Body []byte          `json:"body"`
+	JSON  json.RawMessage `json:"json"`
+	Bytes []byte          `json:"bytes"`
 }
 
 type ResponseTee struct {
@@ -40,7 +40,7 @@ func (rt *ResponseTee) Response() (Response, error) {
 
 		var indentedJSON bytes.Buffer
 		if err := json.Indent(&indentedJSON, b, "", "  "); err != nil {
-			res.Body = b
+			res.Bytes = b
 		} else {
 			res.JSON = indentedJSON.Bytes()
 		}

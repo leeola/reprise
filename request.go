@@ -1,11 +1,40 @@
 package reprise
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+)
 
 type Request struct {
 	Step    int             `json:"-"`
 	Method  string          `json:"method"`
 	URLPath string          `json:"urlPath"`
 	JSON    json.RawMessage `json:"json,omitempty"`
-	Body    []byte          `json:"body,omitempty"`
+	Bytes   []byte          `json:"bytes,omitempty"`
+}
+
+func NewRequest(httpReq *http.Request) (Request, error) {
+	r := Request{
+		Method:  httpReq.Method,
+		URLPath: httpReq.URL.Path,
+	}
+
+	if httpReq.Body != nil {
+		b, err := ioutil.ReadAll(httpReq.Body)
+		if err != nil {
+			return Request{}, fmt.Errorf("readall: %v", err)
+		}
+
+		var buf bytes.Buffer
+		if err := json.Indent(&buf, b, "", "  "); err != nil {
+			r.Bytes = b
+		} else {
+			r.JSON = buf.Bytes()
+		}
+	}
+
+	return r, nil
 }
