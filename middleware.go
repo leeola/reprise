@@ -16,10 +16,22 @@ func Middleware(rep *Reprise) func(next http.Handler) http.Handler {
 				return
 			}
 
-			// serve the request
-			next.ServeHTTP(w, r)
+			tee, err := NewResponseTee(w, r)
+			if err != nil {
+				log.Printf("reprise middleware newresponsetee: %v", err)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
 
-			reqRes := Response{}
+			// serve the request
+			next.ServeHTTP(tee, r)
+
+			reqRes, err := tee.Response()
+			if err != nil {
+				log.Printf("reprise middleware response: %v", err)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
 
 			if err := rep.Write(reqRes, repReq); err != nil {
 				log.Printf("reprise middleware write: %v", err)

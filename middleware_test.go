@@ -28,7 +28,7 @@ func TestMiddleware(t *testing.T) {
 	m := reprise.Middleware(rep)
 
 	h := m(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, client")
+		fmt.Fprint(w, "Hello, client")
 	}))
 
 	ts := httptest.NewServer(h)
@@ -41,6 +41,10 @@ func TestMiddleware(t *testing.T) {
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("unexpected status: %d, %q", resp.StatusCode, resp.Status)
+	}
+
+	if got := string(mustDumpResp(resp)); got != "Hello, client" {
+		t.Errorf("unexpected response. want:%q, got:%q", "Hello, client", got)
 	}
 
 	step, _, _, err := rep.Step()
@@ -61,6 +65,10 @@ func TestMiddleware(t *testing.T) {
 		t.Errorf("unexpected status: %d, %q", resp.StatusCode, resp.Status)
 	}
 
+	if got := string(mustDumpResp(resp)); got != "Hello, client" {
+		t.Errorf("unexpected response. want:%q, got:%q", "Hello, client", got)
+	}
+
 	step, _, _, err = rep.Step()
 	if err != nil {
 		t.Errorf("reprise step: %v", err)
@@ -69,4 +77,13 @@ func TestMiddleware(t *testing.T) {
 	if step != 2 {
 		t.Errorf("unexpected step number. want:%d, got:%d", 2, step)
 	}
+}
+
+func mustDumpResp(resp *http.Response) []byte {
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(fmt.Sprintf("readall: %v", err))
+	}
+
+	return b
 }

@@ -41,18 +41,6 @@ type stepFmt struct {
 	URL    string
 }
 
-type Request struct {
-	Step    int             `json:"-"`
-	Method  string          `json:"method"`
-	URLPath string          `json:"urlPath"`
-	JSON    json.RawMessage `json:"json,omitempty"`
-	Body    []byte          `json:"body,omitempty"`
-}
-
-type Response struct {
-	Body json.RawMessage `json:"body"`
-}
-
 type Reprise struct {
 	mu        sync.Mutex
 	path      string
