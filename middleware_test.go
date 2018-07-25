@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/leeola/reprise"
@@ -42,17 +43,30 @@ func TestMiddleware(t *testing.T) {
 		t.Errorf("unexpected status: %d, %q", resp.StatusCode, resp.Status)
 	}
 
-	_, err = rep.Request()
+	step, _, _, err := rep.Step()
 	if err != nil {
-		t.Errorf("reprise request: %v", err)
+		t.Errorf("reprise step: %v", err)
 	}
 
-	// resp, err = http.Post(ts.URL, "", strings.NewReader(`{"foo": "bar"}`))
-	// if err != nil {
-	// 	t.Fatalf("post: %v", err)
-	// }
+	if step != 1 {
+		t.Errorf("unexpected step number. want:%d, got:%d", 1, step)
+	}
 
-	// if resp.StatusCode != http.StatusOK {
-	// 	t.Errorf("unexpected status: %d, %q", resp.StatusCode, resp.Status)
-	// }
+	resp, err = http.Post(ts.URL, "", strings.NewReader(`{"foo": "bar"}`))
+	if err != nil {
+		t.Fatalf("post: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("unexpected status: %d, %q", resp.StatusCode, resp.Status)
+	}
+
+	step, _, _, err = rep.Step()
+	if err != nil {
+		t.Errorf("reprise step: %v", err)
+	}
+
+	if step != 2 {
+		t.Errorf("unexpected step number. want:%d, got:%d", 2, step)
+	}
 }
