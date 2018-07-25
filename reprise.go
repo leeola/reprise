@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,9 +35,9 @@ func init() {
 }
 
 type stepFmt struct {
-	Step   int
-	Method string
-	URL    string
+	Step    int
+	Method  string
+	URLPath string
 }
 
 type Reprise struct {
@@ -105,38 +106,45 @@ func (rep *Reprise) DiffReprise() ([]string, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (rep *Reprise) verifyStep(method, url string) (stepFmt, error) {
-	name := rep.steps[rep.stepIndex]
+func (rep *Reprise) verifyStep(method, urlStr string) (stepFmt, error) {
+	step := rep.steps[rep.stepIndex]
 
-	newStep := name == nil
+	newStep := step == nil
+
+	url, err := url.Parse(urlStr)
+	if err != nil {
+		return stepFmt{}, fmt.Errorf("url parse: %v", err)
+	}
+
+	urlPath := url.Path
 
 	if !newStep {
 		switch {
-		case name.Method != method:
-			return stepFmt{}, fmt.Errorf("cannot write multiple methods for step: %s", name)
-		case name.URL != url:
-			return stepFmt{}, fmt.Errorf("cannot write multiple urls for step: %s", name)
+		case step.Method != method:
+			return stepFmt{}, fmt.Errorf("cannot write multiple methods for step: %s", step)
+		case step.URLPath != urlPath:
+			return stepFmt{}, fmt.Errorf("cannot write multiple urls for step: %s", step)
 		default:
-			return *name, nil
+			return *step, nil
 		}
 	}
 
-	name = &stepFmt{
-		Step:   rep.stepIndex,
-		Method: method,
-		URL:    url,
+	step = &stepFmt{
+		Step:    rep.stepIndex,
+		Method:  method,
+		URLPath: urlPath,
 	}
 
-	rep.steps[rep.stepIndex] = name
+	rep.steps[rep.stepIndex] = step
 
-	return *name, nil
+	return *step, nil
 }
 
 func (rep *Reprise) Write(res Response, req Request) error {
 	rep.mu.Lock()
 	defer rep.mu.Unlock()
 
-	step, err := rep.verifyStep(req.Method, req.URLPath)
+	step, err := rep.verifyStep(req.Method, req.URI)
 	if err != nil {
 		return err // no wrap
 	}
@@ -204,7 +212,7 @@ func (rep *Reprise) next() {
 }
 
 func (s stepFmt) String() string {
-	return fmt.Sprintf("Step{%02d, %s, %s}", s.Step, s.Method, s.URL)
+	return fmt.Sprintf("step(%02d, %s, %s)", s.Step, s.Method, s.URLPath)
 }
 
 func (s stepFmt) filename() string {
@@ -216,7 +224,7 @@ func (s stepFmt) filename() string {
 	// Since these reprise files on disk are likely to be committed to git
 	// and run by multiple OSs, we have to appease the lowest common
 	// denominator. Which means, no case support for URLs, unfortunately.
-	url := strings.ToLower(urlCharsReg.ReplaceAllString(s.URL, "_"))
+	url := strings.ToLower(urlCharsReg.ReplaceAllString(s.URLPath, "_"))
 	return fmt.Sprintf("%02d.%s.%s", s.Step, strings.ToLower(s.Method), url)
 }
 

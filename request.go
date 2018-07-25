@@ -9,17 +9,17 @@ import (
 )
 
 type Request struct {
-	Step    int             `json:"-"`
-	Method  string          `json:"method"`
-	URLPath string          `json:"urlPath"`
-	JSON    json.RawMessage `json:"json,omitempty"`
-	Bytes   []byte          `json:"bytes,omitempty"`
+	Step   int             `json:"-"`
+	Method string          `json:"method"`
+	URI    string          `json:"uri"`
+	JSON   json.RawMessage `json:"json,omitempty"`
+	Bytes  []byte          `json:"bytes,omitempty"`
 }
 
 func NewRequest(httpReq *http.Request) (Request, error) {
 	r := Request{
-		Method:  httpReq.Method,
-		URLPath: httpReq.URL.Path,
+		Method: httpReq.Method,
+		URI:    httpReq.URL.RequestURI(),
 	}
 
 	if httpReq.Body != nil {

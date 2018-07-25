@@ -35,7 +35,7 @@ func TestMiddleware(t *testing.T) {
 	ts := httptest.NewServer(h)
 	defer ts.Close()
 
-	resp, err := http.Get(ts.URL)
+	resp, err := http.Get(fmt.Sprintf("%s/foo?bar=baz", ts.URL))
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
