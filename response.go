@@ -12,8 +12,8 @@ import (
 )
 
 type Response struct {
-	BodyJSON   json.RawMessage `json:"bodyJson"`
-	BodyBinary []byte          `json:"bodyBytes"`
+	BodyJSON   json.RawMessage `json:"bodyJson,omitempty"`
+	BodyBinary []byte          `json:"bodyBinary,omitempty"`
 }
 
 type ResponseWriterTee struct {
