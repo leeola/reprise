@@ -98,5 +98,5 @@ func bytesOrJSON(b []byte) (jsonBytes, rawBytes []byte, err error) {
 	if err := json.Indent(&indentedJSON, b, "", "  "); err != nil {
 		return nil, b, nil
 	}
-	return nil, indentedJSON.Bytes(), nil
+	return indentedJSON.Bytes(), nil, nil
 }

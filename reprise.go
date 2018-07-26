@@ -275,8 +275,10 @@ func (rep *Reprise) next() {
 		}
 	}
 
-	rep.steps = append(rep.steps, nil)
-	rep.stepIndex = stepsLen
+	if rep.stepIndex >= stepsLen {
+		rep.steps = append(rep.steps, nil)
+		rep.stepIndex = stepsLen
+	}
 }
 
 func (s stepFmt) String() string {

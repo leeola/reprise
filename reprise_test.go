@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/leeola/reprise"
@@ -14,13 +13,13 @@ import (
 
 const tmpRoot = "testdata/tmp"
 
-func TestReprise(t *testing.T) {
+func TestRepriseDiff(t *testing.T) {
 	os.MkdirAll(tmpRoot, 0755)
 	p, err := ioutil.TempDir(tmpRoot, "write")
 	if err != nil {
 		t.Fatalf("tempdir: %v", err)
 	}
-	defer os.RemoveAll(p)
+	// defer os.RemoveAll(p)
 
 	rep, err := reprise.New(p)
 	if err != nil {
@@ -37,33 +36,57 @@ func TestReprise(t *testing.T) {
 	ts := httptest.NewServer(h)
 	defer ts.Close()
 
-	resp, err := http.Post(ts.URL, "", strings.NewReader(`{"foo": "bar"}`))
-	if err != nil {
-		t.Fatalf("post: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("unexpected status: %d, %q", resp.StatusCode, resp.Status)
-	}
-
-	if got := string(mustDumpResp(resp)); got != responseStr {
-		t.Errorf("unexpected response. want:%q, got:%q", responseStr, got)
-	}
+	// call get to make the middleware save the request/response
+	http.Get(ts.URL)
+	rep.SetStep(0)
 
 	// change the http response
 	responseStr = "baz"
-
-	// set the step to the 0th step, as it will have incremented
-	// due to writing from the middleware.
-	rep.SetStep(0)
 
 	// play the last request again
 	diffs, err := rep.RepriseDiff(ts.URL)
 	if err != nil {
 		t.Fatalf("reprisediff: %v", err)
 	}
+	rep.SetStep(0)
 
-	if len(diffs) != 1 {
-		t.Errorf("expected binary diffs to not match")
+	if len(diffs) == 0 {
+		t.Errorf("no binary diffs returned")
+	}
+
+	if len(diffs) > 1 {
+		t.Errorf("unexpected binary diff length")
+	}
+
+	if want := "binary bytes do not match"; diffs[0] != want {
+		t.Errorf("unexpected diff msg. want:%q, got:%q", want, diffs[0])
+	}
+
+	// change to json http response
+	responseStr = `{"foo": "bar"}`
+
+	// call get to make the middleware save the request/response
+	http.Get(ts.URL)
+	rep.SetStep(0)
+
+	// change response for diff
+	responseStr = `{"foo": "baz"}`
+
+	diffs, err = rep.RepriseDiff(ts.URL)
+	if err != nil {
+		t.Fatalf("reprisediff: %v", err)
+	}
+	rep.SetStep(0)
+
+	if len(diffs) == 0 {
+		t.Errorf("no json diffs returned")
+	}
+
+	if len(diffs) > 1 {
+		t.Errorf("unexpected json diff length")
+	}
+
+	if want := "map[foo]: baz != bar"; diffs[0] != want {
+		t.Errorf("unexpected diff msg. want:%q, got:%q", want, diffs[0])
 	}
 }
