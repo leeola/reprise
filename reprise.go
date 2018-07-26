@@ -77,9 +77,11 @@ func (rep *Reprise) Step() (int, *Response, *Request, error) {
 
 	var req *Request
 	if b != nil {
-		if err := json.Unmarshal(b, req); err != nil {
+		var r Request
+		if err := json.Unmarshal(b, &r); err != nil {
 			return 0, nil, nil, fmt.Errorf("request unmarshal: %v", err)
 		}
+		req = &r
 	}
 
 	resPath := filepath.Join(rep.path, step.ResponseFilename())
@@ -90,20 +92,77 @@ func (rep *Reprise) Step() (int, *Response, *Request, error) {
 
 	var res *Response
 	if b != nil {
-		if err := json.Unmarshal(b, res); err != nil {
+		var r Response
+		if err := json.Unmarshal(b, &r); err != nil {
 			return 0, nil, nil, fmt.Errorf("response unmarshal: %v", err)
 		}
+		res = &r
 	}
 
 	return i, res, req, nil
 }
 
-func (rep *Reprise) MakeRequest() (Response, error) {
+func (rep *Reprise) reprise(req Request) (Response, error) {
 	return Response{}, errors.New("not implemented")
 }
 
-func (rep *Reprise) DiffReprise() ([]string, error) {
-	return nil, errors.New("not implemented")
+func (rep *Reprise) RepriseDiff() ([]string, error) {
+	_, stepRes, stepReq, err := rep.Step()
+	if err != nil {
+		return nil, fmt.Errorf("read step: %v", err)
+	}
+
+	if stepReq == nil {
+		return nil, ErrNoRequest
+	}
+	if stepReq == nil {
+		return nil, ErrNoResponse
+	}
+
+	got, err := rep.reprise(*stepReq)
+	if err != nil {
+		return nil, err // no wrap
+	}
+
+	want := *stepRes
+
+	if got.IsJSON != want.IsJSON {
+		// TODO(leeola): make a diff msg similar to whatever i'm using
+		// for the diffing algo.
+		return []string{"two different response bodies, json and non-json"}, nil
+	}
+
+	if !got.IsJSON {
+		if len(got.Bytes) != len(want.Bytes) {
+			// TODO(leeola): make a diff msg similar to whatever i'm using
+			// for the diffing algo.
+			return []string{"body bytes length does not match"}, nil
+		}
+
+		for i, wantB := range want.Bytes {
+			gotB := got.Bytes[i]
+			if wantB != gotB {
+				// TODO(leeola): make a diff msg similar to whatever i'm using
+				// for the diffing algo.
+				return []string{"body bytes do not match"}, nil
+			}
+		}
+	} else {
+		//
+		//
+		//
+		//
+		//
+		// TODO: add json differ
+		//
+		//
+		//
+		//
+		//
+		return nil, errors.New("json diffing not yet implemented")
+	}
+
+	return nil, nil
 }
 
 func (rep *Reprise) verifyStep(method, urlStr string) (stepFmt, error) {

@@ -9,8 +9,9 @@ import (
 )
 
 type Response struct {
-	JSON  json.RawMessage `json:"json"`
-	Bytes []byte          `json:"bytes"`
+	IsJSON bool            `json:"isJson"`
+	JSON   json.RawMessage `json:"json"`
+	Bytes  []byte          `json:"bytes"`
 }
 
 type ResponseTee struct {
@@ -42,6 +43,7 @@ func (rt *ResponseTee) Response() (Response, error) {
 		if err := json.Indent(&indentedJSON, b, "", "  "); err != nil {
 			res.Bytes = b
 		} else {
+			res.IsJSON = true
 			res.JSON = indentedJSON.Bytes()
 		}
 	}
