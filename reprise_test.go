@@ -58,7 +58,7 @@ func TestReprise(t *testing.T) {
 	rep.SetStep(0)
 
 	// play the last request again
-	diffs, err := rep.RepriseDiff()
+	diffs, err := rep.RepriseDiff(ts.URL)
 	if err != nil {
 		t.Fatalf("reprisediff: %v", err)
 	}

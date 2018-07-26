@@ -2,9 +2,9 @@ package reprise
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -104,11 +104,24 @@ func (rep *Reprise) Step() (int, *Response, *Request, error) {
 	return i, res, req, nil
 }
 
-func (rep *Reprise) reprise(req Request) (Response, error) {
-	return Response{}, errors.New("not implemented")
+func (rep *Reprise) reprise(url string, req Request) (Response, error) {
+	httpReq, err := req.HTTPRequest(url)
+	if err != nil {
+		return Response{}, fmt.Errorf("httprequest: %v", err)
+	}
+
+	c := &http.Client{}
+	resp, err := c.Do(httpReq)
+	if err != nil {
+		return Response{}, fmt.Errorf("http do: %v", err)
+	}
+
+	return NewResponse(resp)
 }
 
-func (rep *Reprise) RepriseDiff() ([]string, error) {
+// RepriseDiff creates a http request to the given url combining it with
+// the stored Request.URI for this step and returns diffs of the response.
+func (rep *Reprise) RepriseDiff(url string) ([]string, error) {
 	_, stepRes, stepReq, err := rep.Step()
 	if err != nil {
 		return nil, fmt.Errorf("read step: %v", err)
@@ -121,28 +134,28 @@ func (rep *Reprise) RepriseDiff() ([]string, error) {
 		return nil, ErrNoResponse
 	}
 
-	got, err := rep.reprise(*stepReq)
+	got, err := rep.reprise(url, *stepReq)
 	if err != nil {
 		return nil, err // no wrap
 	}
 
 	want := *stepRes
 
-	if got.IsJSON != want.IsJSON {
+	if got.IsJSON() != want.IsJSON() {
 		// TODO(leeola): make a diff msg similar to whatever i'm using
 		// for the diffing algo.
 		return []string{"two different response bodies, json and non-json"}, nil
 	}
 
-	if !got.IsJSON {
-		if len(got.Bytes) != len(want.Bytes) {
+	if !got.IsJSON() {
+		if len(got.BodyBinary) != len(want.BodyBinary) {
 			// TODO(leeola): make a diff msg similar to whatever i'm using
 			// for the diffing algo.
 			return []string{"body bytes length does not match"}, nil
 		}
 
-		for i, wantB := range want.Bytes {
-			gotB := got.Bytes[i]
+		for i, wantB := range want.BodyBinary {
+			gotB := got.BodyBinary[i]
 			if wantB != gotB {
 				// TODO(leeola): make a diff msg similar to whatever i'm using
 				// for the diffing algo.
@@ -150,7 +163,7 @@ func (rep *Reprise) RepriseDiff() ([]string, error) {
 			}
 		}
 	} else {
-		diff, err := jsondiff.Diff(got.JSON, want.JSON)
+		diff, err := jsondiff.Diff(got.BodyJSON, want.BodyJSON)
 		if err != nil {
 			return nil, fmt.Errorf("jsondiff: %v", err)
 		}

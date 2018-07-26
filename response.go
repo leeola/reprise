@@ -3,24 +3,26 @@ package reprise
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/go-chi/chi/middleware"
 )
 
 type Response struct {
-	IsJSON bool            `json:"isJson"`
-	JSON   json.RawMessage `json:"json"`
-	Bytes  []byte          `json:"bytes"`
+	BodyJSON   json.RawMessage `json:"bodyJson"`
+	BodyBinary []byte          `json:"bodyBytes"`
 }
 
-type ResponseTee struct {
+type ResponseWriterTee struct {
 	http.ResponseWriter
 	tee bytes.Buffer
 }
 
-func NewResponseTee(w http.ResponseWriter, r *http.Request) (*ResponseTee, error) {
-	rr := &ResponseTee{}
+func NewResponseWriterTee(w http.ResponseWriter, r *http.Request) (*ResponseWriterTee, error) {
+	rr := &ResponseWriterTee{}
 
 	// using chi to implement the Tee functionality. Why reinvent the wheel?
 	ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
@@ -30,23 +32,55 @@ func NewResponseTee(w http.ResponseWriter, r *http.Request) (*ResponseTee, error
 	return rr, nil
 }
 
-func (rt *ResponseTee) Response() (Response, error) {
+func NewResponse(r *http.Response) (Response, error) {
 	res := Response{}
 
-	if rt.tee.Len() != 0 {
-		// don't think Bytes() is intended to be used this way,
-		// perhaps it would be better to read the buffer, ensuring
-		// no funny business goes on such as modifications or w/e.
-		b := rt.tee.Bytes()
+	if r.Body != nil {
+		defer r.Body.Close()
 
-		var indentedJSON bytes.Buffer
-		if err := json.Indent(&indentedJSON, b, "", "  "); err != nil {
-			res.Bytes = b
-		} else {
-			res.IsJSON = true
-			res.JSON = indentedJSON.Bytes()
+		jsonB, bytesB, err := readerBytesOrJSON(r.Body)
+		if err != nil {
+			return Response{}, err // no wrap
 		}
+
+		res.BodyBinary = bytesB
+		res.BodyJSON = jsonB
 	}
 
 	return res, nil
+}
+
+func (r Response) IsJSON() bool {
+	return r.BodyJSON != nil
+}
+
+func (rt *ResponseWriterTee) Response() (Response, error) {
+	res := Response{}
+
+	jsonB, bytesB, err := readerBytesOrJSON(&rt.tee)
+	if err != nil {
+		return Response{}, err // no wrap
+	}
+
+	res.BodyBinary = bytesB
+	res.BodyJSON = jsonB
+
+	return res, nil
+}
+
+func readerBytesOrJSON(r io.Reader) (jsonBytes, bytes []byte, err error) {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, nil, fmt.Errorf("readall: %v", err)
+	}
+
+	return bytesOrJSON(b)
+}
+
+func bytesOrJSON(b []byte) (jsonBytes, rawBytes []byte, err error) {
+	var indentedJSON bytes.Buffer
+	if err := json.Indent(&indentedJSON, b, "", "  "); err != nil {
+		return nil, b, nil
+	}
+	return nil, indentedJSON.Bytes(), nil
 }

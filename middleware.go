@@ -16,7 +16,7 @@ func Middleware(rep *Reprise) func(next http.Handler) http.Handler {
 				return
 			}
 
-			tee, err := NewResponseTee(w, r)
+			tee, err := NewResponseWriterTee(w, r)
 			if err != nil {
 				log.Printf("reprise middleware newresponsetee: %v", err)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
