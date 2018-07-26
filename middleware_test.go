@@ -18,7 +18,7 @@ func TestMiddleware(t *testing.T) {
 	if err != nil {
 		t.Fatalf("tempdir: %v", err)
 	}
-	// defer os.RemoveAll(p)
+	defer os.RemoveAll(p)
 
 	rep, err := reprise.New(p)
 	if err != nil {

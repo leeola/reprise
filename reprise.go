@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/leeola/reprise/jsondiff"
 )
 
 var (
@@ -148,18 +150,12 @@ func (rep *Reprise) RepriseDiff() ([]string, error) {
 			}
 		}
 	} else {
-		//
-		//
-		//
-		//
-		//
-		// TODO: add json differ
-		//
-		//
-		//
-		//
-		//
-		return nil, errors.New("json diffing not yet implemented")
+		diff, err := jsondiff.Diff(got.JSON, want.JSON)
+		if err != nil {
+			return nil, fmt.Errorf("jsondiff: %v", err)
+		}
+
+		return diff, nil
 	}
 
 	return nil, nil

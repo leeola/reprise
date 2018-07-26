@@ -60,7 +60,7 @@ func TestReprise(t *testing.T) {
 	// play the last request again
 	diffs, err := rep.RepriseDiff()
 	if err != nil {
-		t.Fatalf("repriseDiff: %v", err)
+		t.Fatalf("reprisediff: %v", err)
 	}
 
 	fmt.Println("diffs", diffs)
