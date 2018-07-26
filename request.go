@@ -42,6 +42,7 @@ func NewRequest(httpReq *http.Request) (Request, error) {
 	return r, nil
 }
 
+// BodyBytes returns the bytes for this request body, if any.
 func (r *Request) BodyBytes() []byte {
 	if r.BodyJSON != nil {
 		return r.BodyJSON
@@ -49,6 +50,7 @@ func (r *Request) BodyBytes() []byte {
 	return r.BodyBinary
 }
 
+// Body returns a reader for this request body, if any.
 func (r *Request) Body() io.Reader {
 	if b := r.BodyBytes(); b != nil {
 		return bytes.NewReader(b)

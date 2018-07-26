@@ -151,7 +151,7 @@ func (rep *Reprise) RepriseDiff(url string) ([]string, error) {
 		if len(got.BodyBinary) != len(want.BodyBinary) {
 			// TODO(leeola): make a diff msg similar to whatever i'm using
 			// for the diffing algo.
-			return []string{"body bytes length does not match"}, nil
+			return []string{"binary bytes length does not match"}, nil
 		}
 
 		for i, wantB := range want.BodyBinary {
@@ -159,7 +159,7 @@ func (rep *Reprise) RepriseDiff(url string) ([]string, error) {
 			if wantB != gotB {
 				// TODO(leeola): make a diff msg similar to whatever i'm using
 				// for the diffing algo.
-				return []string{"body bytes do not match"}, nil
+				return []string{"binary bytes do not match"}, nil
 			}
 		}
 	} else {

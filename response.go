@@ -54,6 +54,22 @@ func (r Response) IsJSON() bool {
 	return r.BodyJSON != nil
 }
 
+// BodyBytes returns the bytes for this request body, if any.
+func (r *Response) BodyBytes() []byte {
+	if r.BodyJSON != nil {
+		return r.BodyJSON
+	}
+	return r.BodyBinary
+}
+
+// Body returns a reader for this request body, if any.
+func (r *Response) Body() io.Reader {
+	if b := r.BodyBytes(); b != nil {
+		return bytes.NewReader(b)
+	}
+	return nil
+}
+
 func (rt *ResponseWriterTee) Response() (Response, error) {
 	res := Response{}
 

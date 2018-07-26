@@ -63,5 +63,7 @@ func TestReprise(t *testing.T) {
 		t.Fatalf("reprisediff: %v", err)
 	}
 
-	fmt.Println("diffs", diffs)
+	if len(diffs) != 1 {
+		t.Errorf("expected binary diffs to not match")
+	}
 }
