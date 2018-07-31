@@ -60,6 +60,14 @@ func New(path string) (*Reprise, error) {
 	return rep, nil
 }
 
+func NewMkdir(path string, perm os.FileMode) (*Reprise, error) {
+	if err := os.Mkdir(path, perm); err != nil {
+		return nil, err // no wrap
+	}
+
+	return New(path)
+}
+
 func (rep *Reprise) Step() (int, *Response, *Request, error) {
 	rep.mu.Lock()
 	defer rep.mu.Unlock()
