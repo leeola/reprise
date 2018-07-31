@@ -25,7 +25,7 @@ func TestMiddleware(t *testing.T) {
 		t.Fatalf("reprise new: %v", err)
 	}
 
-	m := reprise.Middleware(rep)
+	m := reprise.Middleware(reprise.All(rep))
 
 	responseStr := `{"msg": "Hello world"}`
 	h := m(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

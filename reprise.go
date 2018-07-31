@@ -54,18 +54,18 @@ func New(path string) (*Reprise, error) {
 		path: path,
 	}
 
-	// set will ensure we have at least a slice of one, regardless of
-	// what was loaded from the directory.
-	rep.SetStep(0)
+	// setting the step to 0 ensures we initialize the steps slice.
+	rep.setStep(0)
 
 	return rep, nil
 }
 
 func (rep *Reprise) Step() (int, *Response, *Request, error) {
 	rep.mu.Lock()
+	defer rep.mu.Unlock()
+
 	i := rep.stepIndex
 	step := rep.steps[i]
-	rep.mu.Unlock()
 
 	if step == nil {
 		return i, nil, nil, nil
@@ -247,6 +247,12 @@ func (rep *Reprise) SetStep(i int) {
 	rep.mu.Lock()
 	defer rep.mu.Unlock()
 
+	rep.setStep(i)
+}
+
+// setStep is like SetStep, but without a lock, usable from locking
+// methods.
+func (rep *Reprise) setStep(i int) {
 	stepsLen := len(rep.steps)
 	if i >= stepsLen {
 		appendTotal := stepsLen - i + 1

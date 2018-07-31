@@ -5,9 +5,16 @@ import (
 	"net/http"
 )
 
-func Middleware(rep *Reprise) func(next http.Handler) http.Handler {
+func Middleware(repFunc RepriseFunc) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
+
+			rep, ok := repFunc(r)
+			if !ok {
+				// serve the request with no modification
+				next.ServeHTTP(w, r)
+				return
+			}
 
 			repReq, err := NewRequest(r)
 			if err != nil {
@@ -42,4 +49,12 @@ func Middleware(rep *Reprise) func(next http.Handler) http.Handler {
 
 		return http.HandlerFunc(fn)
 	}
+}
+
+type RepriseFunc func(*http.Request) (*Reprise, bool)
+
+func All(r *Reprise) RepriseFunc {
+	return RepriseFunc(func(*http.Request) (*Reprise, bool) {
+		return r, true
+	})
 }

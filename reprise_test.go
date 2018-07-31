@@ -26,7 +26,7 @@ func TestRepriseDiff(t *testing.T) {
 		t.Fatalf("reprise new: %v", err)
 	}
 
-	m := reprise.Middleware(rep)
+	m := reprise.Middleware(reprise.All(rep))
 
 	responseStr := `foo`
 	h := m(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
